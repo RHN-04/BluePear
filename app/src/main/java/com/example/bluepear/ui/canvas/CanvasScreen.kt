@@ -1,12 +1,19 @@
 package com.example.bluepear.ui.canvas
 
-import ScalableCanvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import com.example.bluepear.opengl.MyGLRenderer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -14,10 +21,11 @@ fun CanvasScreen(
     onBack: () -> Unit,
     onExport: () -> Unit
 ) {
-    val currentColor = remember { mutableStateOf(Color.Black) }
-    val brushSize = remember { mutableStateOf(5f) }
-    val paths = remember { mutableStateListOf<Pair<Path, Pair<Color, Float>>>() }
-    val currentPath = remember { mutableStateOf<Path?>(null) }
+    val currentBluePearBrush = remember {
+        mutableStateOf(BluePearBrush(color = Color.Black, size = 5f, type = BrushType.NORMAL))
+    }
+    val isEraser = remember { mutableStateOf(false) }
+    val glRenderer = remember { MyGLRenderer() }
 
     Scaffold(
         topBar = {
@@ -37,31 +45,35 @@ fun CanvasScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            UndoRedoBar(
-                onUndo = { if (paths.isNotEmpty()) paths.removeLast() },
-                onRedo = { /* Логика повтора */ }
+            // Используем DrawingCanvas для рисования
+            DrawingCanvas(
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                brush = currentBluePearBrush.value,
+                glRenderer = glRenderer,
+                onAction = { action ->
+                    // Обработка действий (например, логирование или другое взаимодействие)
+                }
             )
 
-            Box(modifier = Modifier.weight(1f)) {
-                ScalableCanvas {
-                    DrawingCanvas(
-                        paths = paths,
-                        currentPath = currentPath,
-                        currentColor = currentColor,
-                        brushSize = brushSize
+            ToolsMenu(
+                currentColor = currentBluePearBrush.value.color,
+                isEraser = isEraser.value,
+                brushSize = currentBluePearBrush.value.size,
+                onBrushToggle = {
+                    isEraser.value = !isEraser.value
+                    currentBluePearBrush.value = currentBluePearBrush.value.copy(
+                        type = if (isEraser.value) BrushType.ERASER else BrushType.NORMAL
                     )
+                },
+                onBrushSizeChange = { newSize ->
+                    currentBluePearBrush.value = currentBluePearBrush.value.copy(size = newSize)
+                },
+                onColorChange = { newColor ->
+                    currentBluePearBrush.value = currentBluePearBrush.value.copy(color = newColor)
+                },
+                onLayerMenuOpen = {
+                    // Открытие меню слоёв
                 }
-            }
-
-            ToolBar(
-                currentColor = currentColor.value,
-                onSelectColor = { newColor ->
-                    currentColor.value = newColor
-                },
-                onSelectBrushSize = { newSize ->
-                    brushSize.value = newSize
-                },
-                currentBrushSize = brushSize.value
             )
         }
     }
