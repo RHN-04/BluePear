@@ -37,7 +37,6 @@ fun ToolsMenu(
             modifier = Modifier.padding(top = 8.dp)
         )
 
-        // Horizontal layout for Brush/Eraser toggle, color picker, and layer menu button
         Row(
             modifier = Modifier
                 .fillMaxWidth()

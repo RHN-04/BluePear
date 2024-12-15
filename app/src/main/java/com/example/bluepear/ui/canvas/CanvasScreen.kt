@@ -45,13 +45,15 @@ fun CanvasScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // Используем DrawingCanvas для рисования
+            // Канвас для рисования
             DrawingCanvas(
-                modifier = Modifier.weight(1f).fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
                 brush = currentBluePearBrush.value,
                 glRenderer = glRenderer,
                 onAction = { action ->
-                    // Обработка действий (например, логирование или другое взаимодействие)
+
                 }
             )
 
