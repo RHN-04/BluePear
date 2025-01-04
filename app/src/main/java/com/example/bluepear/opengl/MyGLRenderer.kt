@@ -5,14 +5,18 @@ import android.opengl.GLSurfaceView
 import android.util.Log
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import android.os.Handler
+import android.os.Looper
 
 class MyGLRenderer : GLSurfaceView.Renderer {
     private val lines = mutableListOf<Line>()
+    private val linesToAdd = mutableListOf<Line>()
     private var currentLine: Line? = null
 
-    // Добавлены свойства для хранения текущего цвета и размера кисти
-    var currentBrushColor: FloatArray = floatArrayOf(0f, 0f, 0f, 1f) // Черный по умолчанию
-    var currentBrushSize: Float = 5f // Размер по умолчанию
+    var currentBrushColor: FloatArray = floatArrayOf(0f, 0f, 0f, 1f)
+    var currentBrushSize: Float = 5f
+
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(1f, 1f, 1f, 1f)
@@ -32,16 +36,22 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         for (line in lines) {
             line.draw(mvpMatrix)
         }
+
+        if (linesToAdd.isNotEmpty()) {
+            lines.addAll(linesToAdd)
+            linesToAdd.clear()
+        }
     }
 
     fun startLine(x: Float, y: Float) {
         Log.d("MyGLRenderer", "Start line with color: ${currentBrushColor.contentToString()}, size: $currentBrushSize")
         currentLine = Line(currentBrushColor, currentBrushSize).also {
             it.addPoint(x, y)
-            lines.add(it)
+            mainHandler.post {
+                linesToAdd.add(it)
+            }
         }
     }
-
 
     fun updateLine(x: Float, y: Float) {
         currentLine?.addPoint(x, y)
@@ -55,3 +65,4 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         return normX to normY
     }
 }
+

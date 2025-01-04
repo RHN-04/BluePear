@@ -62,7 +62,6 @@ dependencies {
     implementation(libs.androidx.media3.common.ktx)
     testImplementation(libs.junit)
     implementation("androidx.navigation:navigation-compose:2.5.3")
-    implementation ("com.github.skydoves:colorpicker-compose:1.0.5")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

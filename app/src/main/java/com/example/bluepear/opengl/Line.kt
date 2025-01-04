@@ -12,9 +12,8 @@ class Line(private val color: FloatArray, private val width: Float) {
     }
 
     fun draw(mvpMatrix: FloatArray) {
-        if (points.size < 4) return // Нужны хотя бы 2 точки для линии
+        if (points.size < 4 || points.size % 2 != 0) return
 
-        // Создаем копию списка перед рендерингом, чтобы избежать изменений во время отрисовки
         val pointsToDraw = points.toFloatArray()
 
         val vertexBuffer: FloatBuffer = BufferUtil.createFloatBuffer(pointsToDraw)
