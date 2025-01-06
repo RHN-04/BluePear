@@ -3,14 +3,17 @@ package com.example.bluepear.ui.canvas
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
@@ -19,6 +22,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.*
 
 fun Color.toHsv(): FloatArray {
@@ -54,36 +58,51 @@ fun ColorPicker(
         brightness = hsv[2]
     }
 
+    val selectedColor = Color.hsv(hue, saturation, brightness)
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("Выбор цвета") },
         text = {
-            Box(
-                modifier = Modifier.size(300.dp),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                DrawColorRing(
+                Box(
                     modifier = Modifier.size(300.dp),
-                    hue = hue,
-                    onHueChange = { hue = it }
-                )
-                DrawColorTriangle(
-                    modifier = Modifier.size(240.dp),
-                    hue = hue,
-                    saturation = saturation,
-                    brightness = brightness,
-                    onColorChanged = { newSaturation, newBrightness ->
-                        saturation = newSaturation
-                        brightness = newBrightness
-                    }
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    DrawColorRing(
+                        modifier = Modifier.size(300.dp),
+                        hue = hue,
+                        onHueChange = { hue = it }
+                    )
+                    DrawColorTriangle(
+                        modifier = Modifier.size(240.dp),
+                        hue = hue,
+                        saturation = saturation,
+                        brightness = brightness,
+                        onColorChanged = { newSaturation, newBrightness ->
+                            saturation = newSaturation
+                            brightness = newBrightness
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ColorPreview("Текущий цвет", initialColor)
+                    ColorPreview("Выбранный цвет", selectedColor)
+                }
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val color = Color.hsv(hue, saturation, brightness)
-                onColorSelected(color)
-            }) {
+            Button(onClick = { onColorSelected(selectedColor) }) {
                 Text("Выбрать")
             }
         },
@@ -94,6 +113,23 @@ fun ColorPicker(
         }
     )
 }
+
+@Composable
+fun ColorPreview(label: String, color: Color) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = label, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+    }
+}
+
 
 @Composable
 fun DrawColorRing(modifier: Modifier, hue: Float, onHueChange: (Float) -> Unit) {
@@ -143,34 +179,42 @@ fun DrawColorTriangle(
         modifier = modifier.pointerInput(Unit) {
             detectDragGestures { change, _ ->
                 val sizePx = size.width
-                val radius = size.width * 0.56f
-
+                val radius = sizePx * 0.56f
+                val triangleRadius = radius * 1f
                 val center = Offset(sizePx / 2f, sizePx / 2f)
 
                 val angleLeft = Math.toRadians(150.0)
                 val angleRight = Math.toRadians(30.0)
                 val angleTop = Math.toRadians(270.0)
 
-                val leftVertex = Offset(center.x + radius * cos(angleLeft).toFloat(), center.y + radius * sin(angleLeft).toFloat())
-                val rightVertex = Offset(center.x + radius * cos(angleRight).toFloat(), center.y + radius * sin(angleRight).toFloat())
-                val topVertex = Offset(center.x + radius * cos(angleTop).toFloat(), center.y + radius * sin(angleTop).toFloat())
+                val leftVertex = Offset(
+                    center.x + triangleRadius * cos(angleLeft).toFloat(),
+                    center.y + triangleRadius * sin(angleLeft).toFloat()
+                )
+                val rightVertex = Offset(
+                    center.x + triangleRadius * cos(angleRight).toFloat(),
+                    center.y + triangleRadius * sin(angleRight).toFloat()
+                )
+                val topVertex = Offset(
+                    center.x + triangleRadius * cos(angleTop).toFloat(),
+                    center.y + triangleRadius * sin(angleTop).toFloat()
+                )
 
                 val bary = barycentricCoords(change.position, topVertex, leftVertex, rightVertex)
 
                 if (bary.first >= 0f && bary.second >= 0f && bary.third >= 0f) {
                     onColorChanged(
                         bary.second.coerceIn(0f, 1f),
-                        bary.third.coerceIn(0f, 1f)
+                        (1f - bary.first).coerceIn(0f, 1f)
                     )
                 }
             }
         }
-    )
-    {
+    ) {
         val center = Offset(size.width / 2, size.height / 2)
         val radius = size.width * 0.56f
-
         val imageSize = radius * 2
+
         drawIntoCanvas { canvas ->
             val scale = imageSize / cachedBitmap.width
             canvas.save()
@@ -180,31 +224,60 @@ fun DrawColorTriangle(
             canvas.restore()
         }
 
+        val triangleRadius = radius * 0.7f
         val angleLeft = Math.toRadians(150.0)
         val angleRight = Math.toRadians(30.0)
         val angleTop = Math.toRadians(270.0)
 
-        val leftVertex = Offset(center.x + radius * cos(angleLeft).toFloat(), center.y + radius * sin(angleLeft).toFloat())
-        val rightVertex = Offset(center.x + radius * cos(angleRight).toFloat(), center.y + radius * sin(angleRight).toFloat())
-        val topVertex = Offset(center.x + radius * cos(angleTop).toFloat(), center.y + radius * sin(angleTop).toFloat())
+        val leftVertex = Offset(
+            center.x + triangleRadius * cos(angleLeft).toFloat(),
+            center.y + triangleRadius * sin(angleLeft).toFloat()
+        )
+        val rightVertex = Offset(
+            center.x + triangleRadius * cos(angleRight).toFloat(),
+            center.y + triangleRadius * sin(angleRight).toFloat()
+        )
+        val topVertex = Offset(
+            center.x + triangleRadius * cos(angleTop).toFloat(),
+            center.y + triangleRadius * sin(angleTop).toFloat()
+        )
 
-        val validBrightness = brightness.coerceIn(0f, 1f)
-        val validSaturation = saturation.coerceIn(0f, 1f)
-
-        val markerX = topVertex.x * (1 - validBrightness) +
-                rightVertex.x * (validBrightness * (1 - validSaturation)) +
-                leftVertex.x * (validBrightness * validSaturation)
-        val markerY = topVertex.y * (1 - validBrightness) +
-                rightVertex.y * (validBrightness * (1 - validSaturation)) +
-                leftVertex.y * (validBrightness * validSaturation)
+        val markerPosition = calculateMarkerPosition(
+            saturation = saturation.coerceIn(0f, 1f),
+            brightness = (1f - brightness).coerceIn(0f, 1f),
+            topVertex = topVertex,
+            leftVertex = leftVertex,
+            rightVertex = rightVertex
+        )
 
         drawCircle(
             Color.Black,
             radius = 8f,
-            center = Offset(markerX, markerY),
+            center = markerPosition,
             style = Stroke(width = 2f)
         )
     }
+}
+
+fun calculateMarkerPosition(
+    saturation: Float,
+    brightness: Float,
+    topVertex: Offset,
+    leftVertex: Offset,
+    rightVertex: Offset
+): Offset {
+    val adjustedSaturation = saturation * 0.95f
+    val adjustedBrightness = (1f - brightness) * 0.95f
+
+    val x = topVertex.x * (1 - adjustedBrightness) +
+            rightVertex.x * (adjustedBrightness * (1 - adjustedSaturation)) +
+            leftVertex.x * (adjustedBrightness * adjustedSaturation)
+
+    val y = topVertex.y * (1 - adjustedBrightness) +
+            rightVertex.y * (adjustedBrightness * (1 - adjustedSaturation)) +
+            leftVertex.y * (adjustedBrightness * adjustedSaturation)
+
+    return Offset(x, y)
 }
 
 
@@ -225,9 +298,9 @@ fun createSaturationBrightnessBitmap(hue: Float, sizePx: Int): Bitmap {
             if (bary.first >= 0 && bary.second >= 0 && bary.third >= 0) {
                 val color = interpolateColor(
                     bary,
-                    Color.White,
+                    Color.Black,
                     Color.hsv(hue, 1f, 1f),
-                    Color.Black
+                    Color.White
                 )
                 bitmap.setPixel(x, y, color.toArgb())
             } else {

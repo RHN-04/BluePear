@@ -19,14 +19,14 @@ fun UndoRedoBar(
     onRedo: () -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         modifier = Modifier.fillMaxWidth().padding(8.dp)
     ) {
-        IconButton(onClick = onUndo) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Undo")
+        IconButton(onClick = onUndo, modifier = Modifier.padding(end = 8.dp)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Отменить")
         }
         IconButton(onClick = onRedo) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Redo")
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Повторить")
         }
     }
 }

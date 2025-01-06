@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -26,6 +27,9 @@ fun CanvasScreen(
     }
     val isEraser = remember { mutableStateOf(false) }
     val glRenderer = remember { MyGLRenderer() }
+
+    val actions = remember { mutableStateListOf<DrawingAction>() }
+    val undoneActions = remember { mutableStateListOf<DrawingAction>() }
 
     Scaffold(
         topBar = {
@@ -45,7 +49,23 @@ fun CanvasScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // Канвас для рисования
+            UndoRedoBar(
+                onUndo = {
+                    if (actions.isNotEmpty()) {
+                        val lastAction = actions.removeAt(actions.size - 1)
+                        undoneActions.add(lastAction)
+                        glRenderer.undoLastAction(lastAction)
+                    }
+                },
+                onRedo = {
+                    if (undoneActions.isNotEmpty()) {
+                        val redoAction = undoneActions.removeAt(undoneActions.size - 1)
+                        actions.add(redoAction)
+                        glRenderer.redoAction(redoAction)
+                    }
+                }
+            )
+
             DrawingCanvas(
                 modifier = Modifier
                     .weight(1f)
@@ -53,7 +73,23 @@ fun CanvasScreen(
                 brush = currentBluePearBrush.value,
                 glRenderer = glRenderer,
                 onAction = { action ->
+                    when (action) {
+                        is DrawingAction.Start -> actions.add(action)
+                        is DrawingAction.Move -> {
 
+                        }
+                        is DrawingAction.End -> {
+                            val completedLine = glRenderer.currentLine
+                            if (completedLine != null) {
+                                actions.add(DrawingAction.LineCompleted(completedLine))
+                                glRenderer.clearCurrentLine()
+                                undoneActions.clear()
+                            }
+                        }
+
+                        is DrawingAction.LineCompleted -> {
+                        }
+                    }
                 }
             )
 

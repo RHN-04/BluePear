@@ -29,8 +29,7 @@ fun ToolsMenu(
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        // Slider with label for brush size
-        Text(text = "Brush size: ${brushSize.toInt()}", modifier = Modifier.padding(top = 8.dp))
+        Text(text = "Размер: ${brushSize.toInt()}", modifier = Modifier.padding(top = 8.dp))
         BrushSizeSlider(
             brushSize = brushSize,
             onBrushSizeChange = onBrushSizeChange,
@@ -44,12 +43,10 @@ fun ToolsMenu(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Brush/Eraser toggle button
             Button(onClick = onBrushToggle) {
-                Text(if (isEraser) "Eraser" else "Brush")
+                Text(if (isEraser) "Ластик" else "Кисть")
             }
 
-            // Color picker button
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -57,7 +54,6 @@ fun ToolsMenu(
                     .clickable { showColorPicker = true }
             )
 
-            // Layer menu button
             Button(
                 onClick = onLayerMenuOpen
             ) {
@@ -65,7 +61,6 @@ fun ToolsMenu(
             }
         }
 
-        // Color picker dialog
         if (showColorPicker) {
             ColorPicker(
                 initialColor = currentColor,

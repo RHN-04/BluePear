@@ -2,16 +2,19 @@ package com.example.bluepear.opengl
 
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
-import android.util.Log
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import android.os.Handler
 import android.os.Looper
+import com.example.bluepear.ui.canvas.DrawingAction
 
 class MyGLRenderer : GLSurfaceView.Renderer {
     private val lines = mutableListOf<Line>()
     private val linesToAdd = mutableListOf<Line>()
-    private var currentLine: Line? = null
+    private var _currentLine: Line? = null
+
+    val currentLine: Line?
+        get() = _currentLine
 
     var currentBrushColor: FloatArray = floatArrayOf(0f, 0f, 0f, 1f)
     var currentBrushSize: Float = 5f
@@ -44,8 +47,7 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     }
 
     fun startLine(x: Float, y: Float) {
-        Log.d("MyGLRenderer", "Start line with color: ${currentBrushColor.contentToString()}, size: $currentBrushSize")
-        currentLine = Line(currentBrushColor, currentBrushSize).also {
+        _currentLine = Line(currentBrushColor, currentBrushSize).also {
             it.addPoint(x, y)
             mainHandler.post {
                 linesToAdd.add(it)
@@ -54,7 +56,27 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     }
 
     fun updateLine(x: Float, y: Float) {
-        currentLine?.addPoint(x, y)
+        _currentLine?.addPoint(x, y)
+    }
+
+    fun clearCurrentLine() {
+        _currentLine = null
+    }
+
+
+
+    fun undoLastAction(action: DrawingAction) {
+        when (action) {
+            is DrawingAction.LineCompleted -> lines.remove(action.line)
+            else -> Unit
+        }
+    }
+
+    fun redoAction(action: DrawingAction) {
+        when (action) {
+            is DrawingAction.LineCompleted -> lines.add(action.line)
+            else -> Unit
+        }
     }
 
     fun normalizeCoordinate(

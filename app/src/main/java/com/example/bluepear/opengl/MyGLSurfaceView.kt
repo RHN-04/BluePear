@@ -16,7 +16,7 @@ class MyGLSurfaceView(context: Context) : GLSurfaceView(context) {
         if (glRenderer == null) {
             glRenderer = renderer
             setRenderer(renderer)
-            renderMode = RENDERMODE_WHEN_DIRTY
+            renderMode = RENDERMODE_CONTINUOUSLY
         }
     }
 
