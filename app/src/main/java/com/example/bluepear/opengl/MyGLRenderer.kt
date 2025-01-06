@@ -79,6 +79,20 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         }
     }
 
+    fun startEraser(x: Float, y: Float) {
+        val newLines = mutableListOf<Line>()
+        lines.forEach { line ->
+            if (line.removeIntersectingPart(x, y, currentBrushSize)) {
+                // Do not add the modified line if part was removed
+            } else {
+                newLines.add(line)
+            }
+        }
+
+        lines.clear()
+        lines.addAll(newLines)
+    }
+
     fun normalizeCoordinate(
         x: Float, y: Float, left: Float, top: Float, width: Float, height: Float
     ): Pair<Float, Float> {

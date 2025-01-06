@@ -39,11 +39,19 @@ fun DrawingCanvas(
 
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
-                            glRenderer.startLine(normX, normY)
+                            if (brush.type == BrushType.ERASER) {
+                                glRenderer.startEraser(normX, normY)
+                            } else {
+                                glRenderer.startLine(normX, normY)
+                            }
                             onAction(DrawingAction.Start(normX, normY))
                         }
                         MotionEvent.ACTION_MOVE -> {
-                            glRenderer.updateLine(normX, normY)
+                            if (brush.type == BrushType.ERASER) {
+                                glRenderer.startEraser(normX, normY)
+                            } else {
+                                glRenderer.updateLine(normX, normY)
+                            }
                             onAction(DrawingAction.Move(normX, normY))
                         }
                         MotionEvent.ACTION_UP -> {
@@ -58,3 +66,4 @@ fun DrawingCanvas(
         modifier = modifier.fillMaxSize()
     )
 }
+
