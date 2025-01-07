@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     implementation("androidx.navigation:navigation-compose:2.5.3")
     androidTestImplementation(libs.androidx.junit)

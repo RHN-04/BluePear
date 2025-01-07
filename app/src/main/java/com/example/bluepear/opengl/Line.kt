@@ -5,17 +5,21 @@ import java.nio.FloatBuffer
 
 class Line(private val color: FloatArray, private val width: Float) {
     private val points = mutableListOf<Float>()
+    var isComplete: Boolean = false
 
     fun addPoint(x: Float, y: Float) {
         points.add(x)
         points.add(y)
     }
 
+    fun complete() {
+        isComplete = true
+    }
+
     fun draw(mvpMatrix: FloatArray) {
         if (points.size < 4 || points.size % 2 != 0) return
 
         val pointsToDraw = points.toFloatArray()
-
         val vertexBuffer: FloatBuffer = BufferUtil.createFloatBuffer(pointsToDraw)
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER_CODE)
@@ -69,8 +73,9 @@ class Line(private val color: FloatArray, private val width: Float) {
         return partRemoved
     }
 
-
-    private fun isIntersectingWithCircle(x1: Float, y1: Float, x2: Float, y2: Float, cx: Float, cy: Float, r: Float): Boolean {
+    private fun isIntersectingWithCircle(
+        x1: Float, y1: Float, x2: Float, y2: Float, cx: Float, cy: Float, r: Float
+    ): Boolean {
         val dx = x2 - x1
         val dy = y2 - y1
         val fx = x1 - cx

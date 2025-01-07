@@ -1,7 +1,6 @@
 package com.example.bluepear.opengl
 
 import android.opengl.GLES20
-import java.nio.FloatBuffer
 
 class MyGLProgram {
     private var programId: Int = 0
@@ -37,20 +36,6 @@ class MyGLProgram {
         positionHandle = GLES20.glGetAttribLocation(programId, "vPosition")
         colorHandle = GLES20.glGetUniformLocation(programId, "vColor")
         mvpMatrixHandle = GLES20.glGetUniformLocation(programId, "uMVPMatrix")
-    }
-
-    fun drawLine(vertexBuffer: FloatBuffer, size: Int, mvpMatrix: FloatArray) {
-        vertexBuffer.position(0)
-
-        GLES20.glUseProgram(programId)
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-
-        GLES20.glUniform4f(colorHandle, 0.0f, 0.0f, 0.0f, 1.0f) // Black color
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-
-        GLES20.glDrawArrays(GLES20.GL_LINES, 0, size / 2)
-        GLES20.glDisableVertexAttribArray(positionHandle)
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {

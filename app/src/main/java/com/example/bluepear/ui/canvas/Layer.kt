@@ -1,50 +1,72 @@
 package com.example.bluepear.ui.canvas
 
+import com.example.bluepear.opengl.Line
 import com.example.bluepear.opengl.MyGLProgram
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.util.concurrent.CopyOnWriteArrayList
 
-import android.util.Log
-
-class Layer(private val program: MyGLProgram) {
+data class Layer(
+    private val program: MyGLProgram = MyGLProgram(),
+    var isVisible: Boolean = true,
+    var opacity: Float = 1.0f
+) {
     private val INITIAL_BUFFER_SIZE = 1024
     private var currentSize = 0
 
-    private val vertexBuffer: FloatBuffer = ByteBuffer
-        .allocateDirect(INITIAL_BUFFER_SIZE * 4) // 4 bytes per float
+    private var vertexBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(INITIAL_BUFFER_SIZE * 4)
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer()
 
-    fun addLine(x1: Float, y1: Float, x2: Float, y2: Float) {
-        Log.d("Layer", "Adding line: ($x1, $y1) to ($x2, $y2)")
-        val newPoints = floatArrayOf(x1, y1, x2, y2)
-        updateBuffer(newPoints)
+    val lines = mutableListOf<Line>()
+    val linesToAdd = CopyOnWriteArrayList<Line>()
+
+    fun toggleVisibility() {
+        isVisible = !isVisible
     }
 
-    fun render(projectionMatrix: FloatArray) {
-        Log.d("Layer", "Rendering layer. Buffer size: $currentSize")
-        program.drawLine(vertexBuffer, currentSize, projectionMatrix)
-    }
-
-    private fun updateBuffer(newPoints: FloatArray) {
-        if (currentSize + newPoints.size > vertexBuffer.capacity()) {
-            // Expand buffer
-            val newCapacity = (vertexBuffer.capacity() + newPoints.size) * 2
-            val newBuffer = ByteBuffer
-                .allocateDirect(newCapacity * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-
-            vertexBuffer.position(0)
-            newBuffer.put(vertexBuffer)
-            vertexBuffer.clear()
-            vertexBuffer.put(newBuffer)
+    fun addVertex(x: Float, y: Float) {
+        if (vertexBuffer.remaining() < 2) {
+            expandBuffer()
         }
-
-        vertexBuffer.position(currentSize)
-        vertexBuffer.put(newPoints)
-        currentSize += newPoints.size
+        vertexBuffer.put(x)
+        vertexBuffer.put(y)
+        currentSize += 2
     }
 
+    fun draw(projectionMatrix: FloatArray) {
+        if (isVisible) {
+            synchronized(linesToAdd) {
+                linesToAdd.filter { it.isComplete }.also {
+                    lines.addAll(it)
+                    linesToAdd.removeAll(it)
+                }
+            }
+
+            synchronized(lines) {
+                for (line in lines) {
+                    line.draw(projectionMatrix)
+                }
+            }
+        }
+    }
+
+    fun clear() {
+        vertexBuffer.clear()
+        currentSize = 0
+        lines.clear()
+        linesToAdd.clear()
+    }
+
+    private fun expandBuffer() {
+        val newBuffer = ByteBuffer
+            .allocateDirect(vertexBuffer.capacity() * 2)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        vertexBuffer.rewind()
+        newBuffer.put(vertexBuffer)
+        vertexBuffer = newBuffer
+    }
 }

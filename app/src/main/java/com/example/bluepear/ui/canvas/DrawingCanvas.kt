@@ -14,11 +14,13 @@ fun DrawingCanvas(
     modifier: Modifier = Modifier,
     brush: BluePearBrush,
     glRenderer: MyGLRenderer,
+    activeLayerIndex: Int,
     onAction: (DrawingAction) -> Unit
 ) {
-    LaunchedEffect(brush) {
+    LaunchedEffect(brush, activeLayerIndex) {
         glRenderer.currentBrushColor = brush.colorAsFloatArray()
         glRenderer.currentBrushSize = brush.size
+        glRenderer.setActiveLayer(activeLayerIndex)
     }
 
     AndroidView(
@@ -28,31 +30,36 @@ fun DrawingCanvas(
 
                 setOnTouchListener { _, event ->
                     val location = IntArray(2)
-                    getLocationOnScreen(location)
-                    val canvasLeft = 0f
-                    val canvasTop = 0f
+                    getLocationInWindow(location)
+
+                    val canvasLeft = location[0].toFloat()
+                    val canvasTop = location[1].toFloat()
+
                     val canvasWidth = width.toFloat()
                     val canvasHeight = height.toFloat()
-                    val (normX, normY) = glRenderer.normalizeCoordinate(
+
+                    val normalizedCoordinates = glRenderer.normalizeCoordinate(
                         event.x, event.y, canvasLeft, canvasTop, canvasWidth, canvasHeight
                     )
+                    val normalizedX = normalizedCoordinates.first
+                    val normalizedY = normalizedCoordinates.second
 
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
                             if (brush.type == BrushType.ERASER) {
-                                glRenderer.startEraser(normX, normY)
+                                glRenderer.startEraser(normalizedX, normalizedY)
                             } else {
-                                glRenderer.startLine(normX, normY)
+                                glRenderer.startLine(normalizedX, normalizedY)
                             }
-                            onAction(DrawingAction.Start(normX, normY))
+                            onAction(DrawingAction.Start(normalizedX, normalizedY))
                         }
                         MotionEvent.ACTION_MOVE -> {
                             if (brush.type == BrushType.ERASER) {
-                                glRenderer.startEraser(normX, normY)
+                                glRenderer.startEraser(normalizedX, normalizedY)
                             } else {
-                                glRenderer.updateLine(normX, normY)
+                                glRenderer.updateLine(normalizedX, normalizedY)
                             }
-                            onAction(DrawingAction.Move(normX, normY))
+                            onAction(DrawingAction.Move(normalizedX, normalizedY))
                         }
                         MotionEvent.ACTION_UP -> {
                             onAction(DrawingAction.End)
@@ -66,4 +73,3 @@ fun DrawingCanvas(
         modifier = modifier.fillMaxSize()
     )
 }
-

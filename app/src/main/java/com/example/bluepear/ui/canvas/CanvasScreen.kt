@@ -1,20 +1,12 @@
 package com.example.bluepear.ui.canvas
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.example.bluepear.opengl.MyGLRenderer
+import com.example.bluepear.opengl.MyGLProgram
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,14 +14,17 @@ fun CanvasScreen(
     onBack: () -> Unit,
     onExport: () -> Unit
 ) {
-    val currentBluePearBrush = remember {
+    val currentBrush = remember {
         mutableStateOf(BluePearBrush(color = Color.Black, size = 5f, type = BrushType.NORMAL))
     }
     val isEraser = remember { mutableStateOf(false) }
     val glRenderer = remember { MyGLRenderer() }
-
     val actions = remember { mutableStateListOf<DrawingAction>() }
     val undoneActions = remember { mutableStateListOf<DrawingAction>() }
+    val layers = remember { mutableStateListOf(Layer(MyGLProgram())) }
+
+    var isLayersMenuOpen by remember { mutableStateOf(false) }
+    var activeLayerIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -52,14 +47,14 @@ fun CanvasScreen(
             UndoRedoBar(
                 onUndo = {
                     if (actions.isNotEmpty()) {
-                        val lastAction = actions.removeAt(actions.size - 1)
+                        val lastAction = actions.removeAt(actions.lastIndex)
                         undoneActions.add(lastAction)
                         glRenderer.undoLastAction(lastAction)
                     }
                 },
                 onRedo = {
                     if (undoneActions.isNotEmpty()) {
-                        val redoAction = undoneActions.removeAt(undoneActions.size - 1)
+                        val redoAction = undoneActions.removeAt(undoneActions.lastIndex)
                         actions.add(redoAction)
                         glRenderer.redoAction(redoAction)
                     }
@@ -70,14 +65,12 @@ fun CanvasScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize(),
-                brush = currentBluePearBrush.value,
+                brush = currentBrush.value,
                 glRenderer = glRenderer,
+                activeLayerIndex = activeLayerIndex,
                 onAction = { action ->
                     when (action) {
                         is DrawingAction.Start -> actions.add(action)
-                        is DrawingAction.Move -> {
-
-                        }
                         is DrawingAction.End -> {
                             val completedLine = glRenderer.currentLine
                             if (completedLine != null) {
@@ -86,33 +79,46 @@ fun CanvasScreen(
                                 undoneActions.clear()
                             }
                         }
-
-                        is DrawingAction.LineCompleted -> {
-                        }
+                        else -> {}
                     }
                 }
             )
 
             ToolsMenu(
-                currentColor = currentBluePearBrush.value.color,
+                currentColor = currentBrush.value.color,
                 isEraser = isEraser.value,
-                brushSize = currentBluePearBrush.value.size,
+                brushSize = currentBrush.value.size,
                 onBrushToggle = {
                     isEraser.value = !isEraser.value
-                    currentBluePearBrush.value = currentBluePearBrush.value.copy(
+                    currentBrush.value = currentBrush.value.copy(
                         type = if (isEraser.value) BrushType.ERASER else BrushType.NORMAL
                     )
                 },
                 onBrushSizeChange = { newSize ->
-                    currentBluePearBrush.value = currentBluePearBrush.value.copy(size = newSize)
+                    currentBrush.value = currentBrush.value.copy(size = newSize)
                 },
                 onColorChange = { newColor ->
-                    currentBluePearBrush.value = currentBluePearBrush.value.copy(color = newColor)
+                    currentBrush.value = currentBrush.value.copy(color = newColor)
                 },
-                onLayerMenuOpen = {
-                    // Открытие меню слоёв
-                }
+                onLayerMenuOpen = { isLayersMenuOpen = true }
             )
         }
+    }
+
+    if (isLayersMenuOpen) {
+        LayersMenu(
+            layers = layers,
+            activeLayerIndex = activeLayerIndex,
+            onSetActiveLayer = { index -> activeLayerIndex = index },
+            onLayerToggle = { index -> layers[index].toggleVisibility() },
+            onOpacityChange = { index, newOpacity -> layers[index].opacity = newOpacity },
+            onLayerRemove = { index ->
+                if (layers.size > 1) {
+                    layers.removeAt(index)
+                    activeLayerIndex = layers.lastIndex.coerceAtLeast(0)
+                }
+            },
+            onClose = { isLayersMenuOpen = false }
+        )
     }
 }
