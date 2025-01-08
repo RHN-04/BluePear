@@ -1,5 +1,6 @@
 package com.example.bluepear.ui.canvas
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -7,14 +8,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.example.bluepear.data.Work
 import com.example.bluepear.opengl.MyGLRenderer
 import com.example.bluepear.opengl.MyGLProgram
+import kotlinx.coroutines.*
 
+@SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CanvasScreen(
+    work: Work,
     onBack: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onSave: (Work) -> Unit
 ) {
     val currentBrush = remember {
         mutableStateOf(BluePearBrush(color = Color.Black, size = 5f, type = BrushType.NORMAL))
@@ -23,15 +29,37 @@ fun CanvasScreen(
     val glRenderer = remember { MyGLRenderer() }
     val actions = remember { mutableStateListOf<DrawingAction>() }
     val undoneActions = remember { mutableStateListOf<DrawingAction>() }
-    val layers = remember { mutableStateListOf(Layer(id = 1, program = MyGLProgram())) }
-    var activeLayerId by remember { mutableStateOf(layers.first().id) }
+    val layers = remember {
+        if (work.layers.isEmpty()) {
+            mutableStateListOf(Layer(id = 1, program = MyGLProgram()))
+        } else {
+            mutableStateListOf(*work.layers.toTypedArray())
+        }
+    }
 
+    var activeLayerId by remember { mutableStateOf(layers.first().id) }
     var isLayersMenuOpen by remember { mutableStateOf(false) }
+    var isSavingInProgress by remember { mutableStateOf(false) }
+
+    LaunchedEffect(layers) {
+        glRenderer.setLayers(layers)
+    }
+
+    LaunchedEffect(work, layers, actions) {
+        while (isActive) {
+            delay(5000)
+            if (!isSavingInProgress) {
+                isSavingInProgress = true
+                onSave(work.copy(layers = layers, lines = actions.filterIsInstance<DrawingAction.LineCompleted>().map { it.line }.toMutableList()))
+                isSavingInProgress = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Canvas") },
+                title = { Text(work.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -40,6 +68,13 @@ fun CanvasScreen(
                 actions = {
                     IconButton(onClick = onExport) {
                         Text("Export")
+                    }
+                    IconButton(onClick = {
+                        isSavingInProgress = true
+                        onSave(work.copy(layers = layers, lines = actions.filterIsInstance<DrawingAction.LineCompleted>().map { it.line }.toMutableList()))
+                        isSavingInProgress = false
+                    }) {
+                        Text("Save")
                     }
                 }
             )
@@ -96,12 +131,8 @@ fun CanvasScreen(
                         type = if (isEraser.value) BrushType.ERASER else BrushType.NORMAL
                     )
                 },
-                onBrushSizeChange = { newSize ->
-                    currentBrush.value = currentBrush.value.copy(size = newSize)
-                },
-                onColorChange = { newColor ->
-                    currentBrush.value = currentBrush.value.copy(color = newColor)
-                },
+                onBrushSizeChange = { newSize -> currentBrush.value = currentBrush.value.copy(size = newSize) },
+                onColorChange = { newColor -> currentBrush.value = currentBrush.value.copy(color = newColor) },
                 onLayerMenuOpen = { isLayersMenuOpen = true }
             )
         }
@@ -115,7 +146,6 @@ fun CanvasScreen(
                 activeLayerId = id
                 glRenderer.setActiveLayer(id)
             },
-
             onLayerRemove = { id ->
                 if (layers.size > 1) {
                     layers.removeIf { it.id == id }

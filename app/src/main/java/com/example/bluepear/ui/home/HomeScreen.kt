@@ -1,37 +1,34 @@
 package com.example.bluepear.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.bluepear.data.Work
 
 @Composable
 fun HomeScreen(
     onCreateNewWork: () -> Unit,
-    works: List<String>, // Список работ
-    onWorkSelected: (String) -> Unit
+    works: List<Work>,
+    onWorkSelected: (Work) -> Unit
 ) {
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = onCreateNewWork) {
-                Icon(Icons.Default.Add, contentDescription = "Create New Work")
-            }
+    Column(modifier = Modifier.fillMaxSize()) {
+        Button(onClick = onCreateNewWork, modifier = Modifier.fillMaxWidth()) {
+            Text("Новый проект...")
         }
-    ) { padding ->
-        LazyColumn(contentPadding = padding) {
+
+        LazyColumn {
             items(works) { work ->
                 Text(
-                    text = work,
+                    text = work.title,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onWorkSelected(work) }

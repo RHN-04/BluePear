@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.bluepear.opengl.Line
 import com.example.bluepear.opengl.MyGLRenderer
 import com.example.bluepear.opengl.MyGLSurfaceView
 
@@ -15,12 +16,27 @@ fun DrawingCanvas(
     brush: BluePearBrush,
     glRenderer: MyGLRenderer,
     activeLayerId: Int,
-    onAction: (DrawingAction) -> Unit
+    onAction: (DrawingAction) -> Unit,
+    lines: List<Line> = emptyList()
 ) {
     LaunchedEffect(brush, activeLayerId) {
         glRenderer.currentBrushColor = brush.colorAsFloatArray()
         glRenderer.currentBrushSize = brush.size
+
         glRenderer.setActiveLayer(activeLayerId)
+
+        lines.forEach { line ->
+            line.getPoints.forEachIndexed { index, point ->
+                if (index % 2 == 0 && index + 1 < line.getPoints.size) {
+                    glRenderer.drawLine(
+                        line.getPoints[index],
+                        line.getPoints[index + 1],
+                        line.getPoints.getOrNull(index + 2) ?: point,
+                        line.getPoints.getOrNull(index + 3) ?: line.getPoints[index + 1]
+                    )
+                }
+            }
+        }
     }
 
     AndroidView(
@@ -62,6 +78,7 @@ fun DrawingCanvas(
                             onAction(DrawingAction.Move(normalizedX, normalizedY))
                         }
                         MotionEvent.ACTION_UP -> {
+                            glRenderer.clearCurrentLine()
                             onAction(DrawingAction.End)
                         }
                     }

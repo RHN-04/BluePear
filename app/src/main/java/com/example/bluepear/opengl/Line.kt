@@ -3,9 +3,18 @@ package com.example.bluepear.opengl
 import android.opengl.GLES20
 import java.nio.FloatBuffer
 
-class Line(private val color: FloatArray, private val width: Float) {
+class Line(private val color: FloatArray, private val width: Float, val layerId: Int, ) {
     private val points = mutableListOf<Float>()
     var isComplete: Boolean = false
+
+    val getColor: FloatArray
+        get() = color
+
+    val getWidth: Float
+        get() = width
+
+    val getPoints: MutableList<Float>
+        get() = points
 
     fun addPoint(x: Float, y: Float) {
         synchronized(points) {

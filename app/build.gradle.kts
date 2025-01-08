@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     implementation("androidx.navigation:navigation-compose:2.5.3")
+    implementation ("com.google.code.gson:gson:2.8.9")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

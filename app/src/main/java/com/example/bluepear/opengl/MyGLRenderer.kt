@@ -21,9 +21,6 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     val currentLine: Line?
         get() = _currentLine
 
-    val currentLayerIdPublic: Int?
-        get() = this.currentLayerId
-
     private val projectionMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
@@ -43,7 +40,6 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         GLES20.glViewport(0, 0, width, height)
 
         val ratio: Float = width.toFloat() / height.toFloat()
-
         Matrix.frustumM(projectionMatrix, 0, -ratio * 0.7f, ratio * 0.7f, -0.1f, 1f, 3f, 7f)
         Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 5f, 0f, 0f, 0f, 0f, 1f, 0f)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
@@ -51,6 +47,7 @@ class MyGLRenderer : GLSurfaceView.Renderer {
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+
         layers.forEach { layer ->
             if (layer.isVisible) {
                 layer.draw(mvpMatrix)
@@ -58,6 +55,12 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         }
 
         _currentLine?.draw(mvpMatrix)
+    }
+
+    fun setLayers(newLayers: List<Layer>) {
+        layers.clear()
+        layers.addAll(newLayers)
+        currentLayerId = layers.firstOrNull()?.id
     }
 
     fun getLayerVisibility(id: Int): Boolean {
@@ -73,10 +76,21 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         }
     }
 
+    fun drawLine(xStart: Float, yStart: Float, xEnd: Float, yEnd: Float) {
+        val line = Line(currentBrushColor, currentBrushSize, layerId = currentLayerId ?: 1)
+        line.addPoint(xStart, yStart)
+        line.addPoint(xEnd, yEnd)
 
+        val currentLayer = layers.find { it.id == currentLayerId } ?: return
+        synchronized(currentLayer.linesToAdd) {
+            currentLayer.linesToAdd.add(line)
+        }
+
+        line.draw(mvpMatrix)
+    }
 
     fun startLine(x: Float, y: Float) {
-        _currentLine = Line(currentBrushColor, currentBrushSize).also {
+        _currentLine = Line(currentBrushColor, currentBrushSize, layerId = currentLayerId ?: 1).also {
             it.addPoint(x, y)
             val currentLayer = layers.find { it.id == currentLayerId } ?: return
             synchronized(currentLayer.linesToAdd) {
@@ -95,10 +109,12 @@ class MyGLRenderer : GLSurfaceView.Renderer {
             undoStack.add(action)
             redoStack.clear()
             it.complete()
+
             val currentLayer = layers.find { it.id == currentLayerId } ?: return
             synchronized(currentLayer.lines) {
                 currentLayer.lines.add(it)
             }
+
             _currentLine = null
         }
     }

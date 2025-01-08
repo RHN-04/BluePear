@@ -10,8 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 data class Layer(
     val id: Int,
     private val program: MyGLProgram = MyGLProgram(),
-    var isVisible: Boolean = true,
-    var opacity: Float = 1.0f
+    var isVisible: Boolean = true
 ) {
     private val INITIAL_BUFFER_SIZE = 1024
     private var currentSize = 0
@@ -35,6 +34,17 @@ data class Layer(
         vertexBuffer.put(x)
         vertexBuffer.put(y)
         currentSize += 2
+    }
+
+    fun addLine(line: Line) {
+        linesToAdd.add(line)
+    }
+
+    fun commitLines() {
+        synchronized(linesToAdd) {
+            lines.addAll(linesToAdd)
+            linesToAdd.clear()
+        }
     }
 
     fun draw(projectionMatrix: FloatArray) {
