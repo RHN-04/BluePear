@@ -57,7 +57,7 @@ fun ToolsMenu(
             Button(
                 onClick = onLayerMenuOpen
             ) {
-                Text("Layer Menu")
+                Text("Слои")
             }
         }
 

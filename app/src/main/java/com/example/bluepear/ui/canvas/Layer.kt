@@ -8,6 +8,7 @@ import java.nio.FloatBuffer
 import java.util.concurrent.CopyOnWriteArrayList
 
 data class Layer(
+    val id: Int,
     private val program: MyGLProgram = MyGLProgram(),
     var isVisible: Boolean = true,
     var opacity: Float = 1.0f
@@ -38,15 +39,13 @@ data class Layer(
 
     fun draw(projectionMatrix: FloatArray) {
         if (isVisible) {
-            synchronized(linesToAdd) {
-                linesToAdd.filter { it.isComplete }.also {
-                    lines.addAll(it)
-                    linesToAdd.removeAll(it)
-                }
-            }
-
             synchronized(lines) {
                 for (line in lines) {
+                    line.draw(projectionMatrix)
+                }
+            }
+            synchronized(linesToAdd) {
+                for (line in linesToAdd) {
                     line.draw(projectionMatrix)
                 }
             }

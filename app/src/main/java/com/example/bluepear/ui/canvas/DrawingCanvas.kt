@@ -14,13 +14,13 @@ fun DrawingCanvas(
     modifier: Modifier = Modifier,
     brush: BluePearBrush,
     glRenderer: MyGLRenderer,
-    activeLayerIndex: Int,
+    activeLayerId: Int,
     onAction: (DrawingAction) -> Unit
 ) {
-    LaunchedEffect(brush, activeLayerIndex) {
+    LaunchedEffect(brush, activeLayerId) {
         glRenderer.currentBrushColor = brush.colorAsFloatArray()
         glRenderer.currentBrushSize = brush.size
-        glRenderer.setActiveLayer(activeLayerIndex)
+        glRenderer.setActiveLayer(activeLayerId)
     }
 
     AndroidView(

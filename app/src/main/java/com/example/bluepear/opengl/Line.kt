@@ -8,8 +8,10 @@ class Line(private val color: FloatArray, private val width: Float) {
     var isComplete: Boolean = false
 
     fun addPoint(x: Float, y: Float) {
-        points.add(x)
-        points.add(y)
+        synchronized(points) {
+            points.add(x)
+            points.add(y)
+        }
     }
 
     fun complete() {
@@ -19,7 +21,10 @@ class Line(private val color: FloatArray, private val width: Float) {
     fun draw(mvpMatrix: FloatArray) {
         if (points.size < 4 || points.size % 2 != 0) return
 
-        val pointsToDraw = points.toFloatArray()
+        val pointsToDraw: FloatArray
+        synchronized(points) {
+            pointsToDraw = points.toFloatArray()
+        }
         val vertexBuffer: FloatBuffer = BufferUtil.createFloatBuffer(pointsToDraw)
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER_CODE)
@@ -51,23 +56,25 @@ class Line(private val color: FloatArray, private val width: Float) {
         val newPoints = mutableListOf<Float>()
         var partRemoved = false
 
-        for (i in 0 until points.size step 2) {
-            val x1 = points[i]
-            val y1 = points[i + 1]
-            val x2 = if (i + 2 < points.size) points[i + 2] else x1
-            val y2 = if (i + 3 < points.size) points[i + 3] else y1
+        synchronized(points) {
+            for (i in 0 until points.size step 2) {
+                val x1 = points[i]
+                val y1 = points[i + 1]
+                val x2 = if (i + 2 < points.size) points[i + 2] else x1
+                val y2 = if (i + 3 < points.size) points[i + 3] else y1
 
-            if (isIntersectingWithCircle(x1, y1, x2, y2, x, y, radius)) {
-                partRemoved = true
-            } else {
-                newPoints.add(x1)
-                newPoints.add(y1)
+                if (isIntersectingWithCircle(x1, y1, x2, y2, x, y, radius)) {
+                    partRemoved = true
+                } else {
+                    newPoints.add(x1)
+                    newPoints.add(y1)
+                }
             }
-        }
 
-        if (partRemoved) {
-            points.clear()
-            points.addAll(newPoints)
+            if (partRemoved) {
+                points.clear()
+                points.addAll(newPoints)
+            }
         }
 
         return partRemoved

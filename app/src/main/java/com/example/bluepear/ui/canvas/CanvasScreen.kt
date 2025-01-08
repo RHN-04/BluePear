@@ -1,6 +1,8 @@
 package com.example.bluepear.ui.canvas
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,10 +23,10 @@ fun CanvasScreen(
     val glRenderer = remember { MyGLRenderer() }
     val actions = remember { mutableStateListOf<DrawingAction>() }
     val undoneActions = remember { mutableStateListOf<DrawingAction>() }
-    val layers = remember { mutableStateListOf(Layer(MyGLProgram())) }
+    val layers = remember { mutableStateListOf(Layer(id = 1, program = MyGLProgram())) }
+    var activeLayerId by remember { mutableStateOf(layers.first().id) }
 
     var isLayersMenuOpen by remember { mutableStateOf(false) }
-    var activeLayerIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -32,7 +34,7 @@ fun CanvasScreen(
                 title = { Text("Canvas") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 actions = {
@@ -67,7 +69,7 @@ fun CanvasScreen(
                     .fillMaxSize(),
                 brush = currentBrush.value,
                 glRenderer = glRenderer,
-                activeLayerIndex = activeLayerIndex,
+                activeLayerId = activeLayerId,
                 onAction = { action ->
                     when (action) {
                         is DrawingAction.Start -> actions.add(action)
@@ -108,17 +110,26 @@ fun CanvasScreen(
     if (isLayersMenuOpen) {
         LayersMenu(
             layers = layers,
-            activeLayerIndex = activeLayerIndex,
-            onSetActiveLayer = { index -> activeLayerIndex = index },
-            onLayerToggle = { index -> layers[index].toggleVisibility() },
-            onOpacityChange = { index, newOpacity -> layers[index].opacity = newOpacity },
-            onLayerRemove = { index ->
+            activeLayerId = activeLayerId,
+            onSetActiveLayer = { id ->
+                activeLayerId = id
+                glRenderer.setActiveLayer(id)
+            },
+
+            onLayerRemove = { id ->
                 if (layers.size > 1) {
-                    layers.removeAt(index)
-                    activeLayerIndex = layers.lastIndex.coerceAtLeast(0)
+                    layers.removeIf { it.id == id }
+                    glRenderer.removeLayer(id)
+                    activeLayerId = layers.lastOrNull()?.id ?: 1
+                    glRenderer.setActiveLayer(activeLayerId)
                 }
             },
-            onClose = { isLayersMenuOpen = false }
+            onAddLayer = {
+                val newLayerId = glRenderer.addLayer()
+                layers.add(Layer(id = newLayerId, program = MyGLProgram()))
+            },
+            onClose = { isLayersMenuOpen = false },
+            glRenderer = glRenderer
         )
     }
 }

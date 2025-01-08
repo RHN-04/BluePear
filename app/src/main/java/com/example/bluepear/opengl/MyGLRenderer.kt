@@ -3,6 +3,7 @@ package com.example.bluepear.opengl
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.util.Log
 import com.example.bluepear.ui.canvas.DrawingAction
 import com.example.bluepear.ui.canvas.Layer
 import javax.microedition.khronos.egl.EGLConfig
@@ -11,10 +12,17 @@ import javax.microedition.khronos.opengles.GL10
 class MyGLRenderer : GLSurfaceView.Renderer {
     private var _currentLine: Line? = null
     private val layers = mutableListOf<Layer>()
-    private var currentLayerIndex = 0
+    private var currentLayerId: Int? = null
+    private var nextLayerId = 1
+
+    private val undoStack = mutableListOf<DrawingAction>()
+    private val redoStack = mutableListOf<DrawingAction>()
 
     val currentLine: Line?
         get() = _currentLine
+
+    val currentLayerIdPublic: Int?
+        get() = this.currentLayerId
 
     private val projectionMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
@@ -43,24 +51,36 @@ class MyGLRenderer : GLSurfaceView.Renderer {
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-
-        for (layer in layers) {
+        layers.forEach { layer ->
             if (layer.isVisible) {
                 layer.draw(mvpMatrix)
             }
         }
 
-        _currentLine?.let {
-            it.draw(mvpMatrix)
+        _currentLine?.draw(mvpMatrix)
+    }
+
+    fun getLayerVisibility(id: Int): Boolean {
+        val layer = layers.find { it.id == id }
+        return layer?.isVisible ?: false
+    }
+
+    fun toggleLayerVisibility(id: Int, isVisible: Boolean) {
+        val layer = layers.find { it.id == id }
+        layer?.let {
+            it.isVisible = isVisible
+            Log.d("Renderer", "Layer ${layer.id} visibility set to $isVisible")
         }
     }
+
 
 
     fun startLine(x: Float, y: Float) {
         _currentLine = Line(currentBrushColor, currentBrushSize).also {
             it.addPoint(x, y)
-            synchronized(layers[currentLayerIndex].linesToAdd) {
-                layers[currentLayerIndex].linesToAdd.add(it)
+            val currentLayer = layers.find { it.id == currentLayerId } ?: return
+            synchronized(currentLayer.linesToAdd) {
+                currentLayer.linesToAdd.add(it)
             }
         }
     }
@@ -70,12 +90,21 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     }
 
     fun clearCurrentLine() {
-        _currentLine?.complete()
-        _currentLine = null
+        _currentLine?.let {
+            val action = DrawingAction.LineCompleted(it)
+            undoStack.add(action)
+            redoStack.clear()
+            it.complete()
+            val currentLayer = layers.find { it.id == currentLayerId } ?: return
+            synchronized(currentLayer.lines) {
+                currentLayer.lines.add(it)
+            }
+            _currentLine = null
+        }
     }
 
     fun undoLastAction(action: DrawingAction) {
-        val currentLayer = layers.getOrNull(currentLayerIndex) ?: return
+        val currentLayer = currentLayerId?.let { layers.getOrNull(it) } ?: return
 
         synchronized(currentLayer.lines) {
             when (action) {
@@ -90,7 +119,7 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     }
 
     fun redoAction(action: DrawingAction) {
-        val currentLayer = layers.getOrNull(currentLayerIndex) ?: return
+        val currentLayer = currentLayerId?.let { layers.getOrNull(it) } ?: return
 
         synchronized(currentLayer.lines) {
             when (action) {
@@ -101,7 +130,7 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     }
 
     fun startEraser(x: Float, y: Float) {
-        val currentLayer = layers.getOrNull(currentLayerIndex) ?: return
+        val currentLayer = layers.find { it.id == currentLayerId } ?: return
         val eraserRadius = currentBrushSize
 
         synchronized(currentLayer.lines) {
@@ -116,14 +145,32 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         }
     }
 
-    private fun addLayer() {
-        layers.add(Layer())
+    fun removeLayer(id: Int) {
+        val layerToRemove = layers.find { it.id == id }
+        layerToRemove?.let {
+            layers.remove(it)
+            Log.d("Renderer", "Layer $id removed")
+
+            if (currentLayerId == id) {
+                currentLayerId = layers.lastOrNull()?.id
+                Log.d("Renderer", "Current layer changed to $currentLayerId")
+            }
+        }
     }
 
-    fun setActiveLayer(index: Int) {
-        if (index in layers.indices) {
-            currentLayerIndex = index
-        }
+    fun addLayer(): Int {
+        val newLayer = Layer(id = nextLayerId++, program = MyGLProgram())
+        layers.add(newLayer)
+        currentLayerId = newLayer.id
+        Log.d("Renderer", "Layer ${newLayer.id} added. Current layer: $currentLayerId")
+        return newLayer.id
+    }
+
+    fun setActiveLayer(id: Int) {
+        layers.find { it.id == id }?.let {
+            currentLayerId = id
+            Log.d("Renderer", "Active layer set to $currentLayerId")
+        } ?: Log.w("Renderer", "Layer $id not found. Active layer unchanged.")
     }
 
     fun normalizeCoordinate(
