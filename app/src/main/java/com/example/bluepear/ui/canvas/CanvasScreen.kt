@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,6 +13,8 @@ import com.example.bluepear.data.Work
 import com.example.bluepear.opengl.MyGLRenderer
 import com.example.bluepear.opengl.MyGLProgram
 import kotlinx.coroutines.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,14 +70,15 @@ fun CanvasScreen(
                 },
                 actions = {
                     IconButton(onClick = onExport) {
-                        Text("Export")
+                        Icon(Icons.Filled.Share, contentDescription = "Экспортировать")
                     }
+
                     IconButton(onClick = {
                         isSavingInProgress = true
                         onSave(work.copy(layers = layers, lines = actions.filterIsInstance<DrawingAction.LineCompleted>().map { it.line }.toMutableList()))
                         isSavingInProgress = false
                     }) {
-                        Text("Save")
+                        Text("Сохранить")
                     }
                 }
             )

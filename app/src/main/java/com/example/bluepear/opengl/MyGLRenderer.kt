@@ -1,11 +1,13 @@
 package com.example.bluepear.opengl
 
+import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
 import com.example.bluepear.ui.canvas.DrawingAction
 import com.example.bluepear.ui.canvas.Layer
+import java.nio.IntBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -14,6 +16,9 @@ class MyGLRenderer : GLSurfaceView.Renderer {
     private val layers = mutableListOf<Layer>()
     private var currentLayerId: Int? = null
     private var nextLayerId = 1
+
+    private var canvasWidth = 1080
+    private var canvasHeight = 1920
 
     private val undoStack = mutableListOf<DrawingAction>()
     private val redoStack = mutableListOf<DrawingAction>()
@@ -36,7 +41,70 @@ class MyGLRenderer : GLSurfaceView.Renderer {
         }
     }
 
+    fun captureToBitmap(): Bitmap? {
+        if (canvasWidth == 0 || canvasHeight == 0) {
+            Log.w("MyGLRenderer", "Canvas size is not initialized. Width: $canvasWidth, Height: $canvasHeight")
+            return null
+        }
+
+        Log.d("MyGLRenderer", "Starting captureToBitmap: Width=$canvasWidth, Height=$canvasHeight")
+
+        val intBuffer = IntBuffer.allocate(canvasWidth * canvasHeight)
+
+        try {
+            GLES20.glFinish()
+            Log.d("MyGLRenderer", "glFinish() called successfully")
+
+            GLES20.glReadPixels(
+                0, 0,
+                canvasWidth, canvasHeight,
+                GLES20.GL_RGBA,
+                GLES20.GL_UNSIGNED_BYTE,
+                intBuffer
+            )
+            Log.d("MyGLRenderer", "glReadPixels executed successfully")
+        } catch (e: Exception) {
+            Log.e("MyGLRenderer", "Error during glReadPixels: ${e.message}")
+            return null
+        }
+
+        // Проверка ошибок OpenGL
+        val error = GLES20.glGetError()
+        if (error != GLES20.GL_NO_ERROR) {
+            Log.e("MyGLRenderer", "OpenGL error during glReadPixels: $error")
+            return null
+        }
+
+        // Получение данных пикселей и преобразование их в Bitmap
+        val pixelData = intBuffer.array()
+        val bitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
+
+        try {
+            for (y in 0 until canvasHeight) {
+                for (x in 0 until canvasWidth) {
+                    val pixel = pixelData[(canvasHeight - y - 1) * canvasWidth + x] // Переворачиваем изображение
+
+                    val flippedPixel = (pixel and -0x1000000) or  // Alpha
+                            ((pixel and 0x00FF0000) shr 16) or  // Red
+                            (pixel and 0x0000FF00) or  // Green
+                            ((pixel and 0x000000FF) shl 16)  // Blue
+
+                    bitmap.setPixel(x, y, flippedPixel)
+                }
+            }
+            Log.d("MyGLRenderer", "Bitmap created successfully")
+        } catch (e: Exception) {
+            Log.e("MyGLRenderer", "Error during Bitmap creation: ${e.message}")
+            return null
+        }
+
+        return bitmap
+    }
+
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+        canvasWidth = width
+        canvasHeight = height
+
         GLES20.glViewport(0, 0, width, height)
 
         val ratio: Float = width.toFloat() / height.toFloat()

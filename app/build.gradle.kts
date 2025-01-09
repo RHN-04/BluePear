@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.media3.exoplayer)
     testImplementation(libs.junit)
     implementation("androidx.navigation:navigation-compose:2.5.3")
     implementation ("com.google.code.gson:gson:2.8.9")

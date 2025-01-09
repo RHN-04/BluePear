@@ -13,12 +13,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.bluepear.data.Work
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
 
 @Composable
 fun HomeScreen(
     onCreateNewWork: () -> Unit,
     works: List<Work>,
-    onWorkSelected: (Work) -> Unit
+    onWorkSelected: (Work) -> Unit,
+    onWorkDeleted: (Work) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Button(onClick = onCreateNewWork, modifier = Modifier.fillMaxWidth()) {
@@ -27,14 +32,26 @@ fun HomeScreen(
 
         LazyColumn {
             items(works) { work ->
-                Text(
-                    text = work.title,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onWorkSelected(work) }
-                        .padding(16.dp)
-                )
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = work.title,
+                        modifier = Modifier
+                            .clickable { onWorkSelected(work) }
+                    )
+                    IconButton(
+                        onClick = { onWorkDeleted(work) }
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Удалить")
+                    }
+                }
             }
         }
     }
 }
+
+

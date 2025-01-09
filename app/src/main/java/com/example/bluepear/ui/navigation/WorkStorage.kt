@@ -45,4 +45,9 @@ class WorkStorage(context: Context) {
         }
         return allWorks
     }
+
+    fun deleteWork(title: String) {
+        sharedPreferences.edit().remove(title).apply()
+        println("Deleted Work: $title")
+    }
 }

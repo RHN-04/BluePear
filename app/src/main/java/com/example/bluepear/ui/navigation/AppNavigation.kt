@@ -1,6 +1,7 @@
 package com.example.bluepear.ui.navigation
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -8,13 +9,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.bluepear.data.Work
+import com.example.bluepear.opengl.MyGLRenderer
+import com.example.bluepear.ui.canvas.DrawingCanvas
 import com.example.bluepear.ui.home.HomeScreen
 import com.example.bluepear.ui.canvas.CanvasScreen
 import com.example.bluepear.ui.thisproject.ProjectScreen
 import com.example.bluepear.ui.newproject.NewProjectScreen
+import com.example.bluepear.utils.FileUtils.saveBitmapToFile
 
 @Composable
-fun AppNavigation(context: Context) {
+fun AppNavigation(context: Context,  glRenderer: MyGLRenderer) {
     val navController = rememberNavController()
     val works = remember { mutableStateListOf<Work>() }
     val workStorage = WorkStorage(context)
@@ -26,8 +30,10 @@ fun AppNavigation(context: Context) {
             HomeScreen(
                 onCreateNewWork = { navController.navigate("newwork") },
                 works = works,
-                onWorkSelected = { work ->
-                    navController.navigate("work/${work.title}")
+                onWorkSelected = { work -> navController.navigate("work/${work.title}") },
+                onWorkDeleted = { work ->
+                    workStorage.deleteWork(work.title)
+                    works.remove(work)
                 }
             )
         }
@@ -47,7 +53,14 @@ fun AppNavigation(context: Context) {
             CanvasScreen(
                 work = work,
                 onBack = { navController.popBackStack() },
-                onExport = { /* Handle export */ },
+                onExport = {
+                    val bitmap = glRenderer.captureToBitmap()
+                    if (bitmap != null) {
+                        saveBitmapToFile(bitmap, context)
+                    } else {
+                        Toast.makeText(context, "Не удалось сохранить картинку :(", Toast.LENGTH_SHORT).show()
+                    }
+                },
                 onSave = { updatedWork ->
                     workStorage.saveWork(updatedWork)
                     val index = works.indexOfFirst { it.title == updatedWork.title }
@@ -64,9 +77,15 @@ fun AppNavigation(context: Context) {
             ProjectScreen(
                 work = work,
                 onEdit = { navController.navigate("canvas/${work.title}") },
-                onExport = { /* Handle export */ }
+                onExport = {
+                    val bitmap = glRenderer.captureToBitmap()
+                    if (bitmap != null) {
+                        saveBitmapToFile(bitmap, context)
+                    } else {
+                        Toast.makeText(context, "Не удалось сохранить картинку :(", Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
         }
     }
 }
-
