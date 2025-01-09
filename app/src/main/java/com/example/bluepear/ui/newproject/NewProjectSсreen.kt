@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -18,15 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun NewProjectScreen(
-    onCanvasCreate: (Int, Int) -> Unit
+    onCanvasCreate: (String) -> Unit
 ) {
-    var width by remember { mutableStateOf("") }
-    var height by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -36,30 +33,20 @@ fun NewProjectScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(
-            value = width,
-            onValueChange = { width = it },
-            label = { Text("Width (px)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Заголовок") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
-        TextField(
-            value = height,
-            onValueChange = { height = it },
-            label = { Text("Height (px)") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = {
-                val w = width.toIntOrNull() ?: 0
-                val h = height.toIntOrNull() ?: 0
-                if (w > 0 && h > 0) onCanvasCreate(w, h)
+                if (title.isNotBlank()) onCanvasCreate(title)
             },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Text("Create")
+            Text("Начать")
         }
     }
 }

@@ -1,36 +1,84 @@
 package com.example.bluepear.ui.canvas
 
-import ScalableCanvas
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import com.example.bluepear.data.Work
+import com.example.bluepear.opengl.MyGLRenderer
+import com.example.bluepear.opengl.MyGLProgram
+import kotlinx.coroutines.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
+@SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CanvasScreen(
+    work: Work,
     onBack: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onSave: (Work) -> Unit
 ) {
-    val currentColor = remember { mutableStateOf(Color.Black) }
-    val brushSize = remember { mutableStateOf(5f) }
-    val paths = remember { mutableStateListOf<Pair<Path, Pair<Color, Float>>>() }
-    val currentPath = remember { mutableStateOf<Path?>(null) }
+    val currentBrush = remember {
+        mutableStateOf(BluePearBrush(color = Color.Black, size = 5f, type = BrushType.NORMAL))
+    }
+    val isEraser = remember { mutableStateOf(false) }
+    val glRenderer = remember { MyGLRenderer() }
+    val actions = remember { mutableStateListOf<DrawingAction>() }
+    val undoneActions = remember { mutableStateListOf<DrawingAction>() }
+    val layers = remember {
+        if (work.layers.isEmpty()) {
+            mutableStateListOf(Layer(id = 1, program = MyGLProgram()))
+        } else {
+            mutableStateListOf(*work.layers.toTypedArray())
+        }
+    }
+
+    var activeLayerId by remember { mutableStateOf(layers.first().id) }
+    var isLayersMenuOpen by remember { mutableStateOf(false) }
+    var isSavingInProgress by remember { mutableStateOf(false) }
+
+    LaunchedEffect(layers) {
+        glRenderer.setLayers(layers)
+    }
+
+    LaunchedEffect(work, layers, actions) {
+        while (isActive) {
+            delay(5000)
+            if (!isSavingInProgress) {
+                isSavingInProgress = true
+                onSave(work.copy(layers = layers, lines = actions.filterIsInstance<DrawingAction.LineCompleted>().map { it.line }.toMutableList()))
+                isSavingInProgress = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Canvas") },
+                title = { Text(work.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
                 },
                 actions = {
                     IconButton(onClick = onExport) {
-                        Text("Export")
+                        Icon(Icons.Filled.Share, contentDescription = "Экспортировать")
+                    }
+
+                    IconButton(onClick = {
+                        isSavingInProgress = true
+                        onSave(work.copy(layers = layers, lines = actions.filterIsInstance<DrawingAction.LineCompleted>().map { it.line }.toMutableList()))
+                        isSavingInProgress = false
+                    }) {
+                        Text("Сохранить")
                     }
                 }
             )
@@ -38,31 +86,84 @@ fun CanvasScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             UndoRedoBar(
-                onUndo = { if (paths.isNotEmpty()) paths.removeLast() },
-                onRedo = { /* Логика повтора */ }
+                onUndo = {
+                    if (actions.isNotEmpty()) {
+                        val lastAction = actions.removeAt(actions.lastIndex)
+                        undoneActions.add(lastAction)
+                        glRenderer.undoLastAction(lastAction)
+                    }
+                },
+                onRedo = {
+                    if (undoneActions.isNotEmpty()) {
+                        val redoAction = undoneActions.removeAt(undoneActions.lastIndex)
+                        actions.add(redoAction)
+                        glRenderer.redoAction(redoAction)
+                    }
+                }
             )
 
-            Box(modifier = Modifier.weight(1f)) {
-                ScalableCanvas {
-                    DrawingCanvas(
-                        paths = paths,
-                        currentPath = currentPath,
-                        currentColor = currentColor,
-                        brushSize = brushSize
-                    )
+            DrawingCanvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                brush = currentBrush.value,
+                glRenderer = glRenderer,
+                activeLayerId = activeLayerId,
+                onAction = { action ->
+                    when (action) {
+                        is DrawingAction.Start -> actions.add(action)
+                        is DrawingAction.End -> {
+                            val completedLine = glRenderer.currentLine
+                            if (completedLine != null) {
+                                actions.add(DrawingAction.LineCompleted(completedLine))
+                                glRenderer.clearCurrentLine()
+                                undoneActions.clear()
+                            }
+                        }
+                        else -> {}
+                    }
                 }
-            }
+            )
 
-            ToolBar(
-                currentColor = currentColor.value,
-                onSelectColor = { newColor ->
-                    currentColor.value = newColor
+            ToolsMenu(
+                currentColor = currentBrush.value.color,
+                isEraser = isEraser.value,
+                brushSize = currentBrush.value.size,
+                onBrushToggle = {
+                    isEraser.value = !isEraser.value
+                    currentBrush.value = currentBrush.value.copy(
+                        type = if (isEraser.value) BrushType.ERASER else BrushType.NORMAL
+                    )
                 },
-                onSelectBrushSize = { newSize ->
-                    brushSize.value = newSize
-                },
-                currentBrushSize = brushSize.value
+                onBrushSizeChange = { newSize -> currentBrush.value = currentBrush.value.copy(size = newSize) },
+                onColorChange = { newColor -> currentBrush.value = currentBrush.value.copy(color = newColor) },
+                onLayerMenuOpen = { isLayersMenuOpen = true }
             )
         }
+    }
+
+    if (isLayersMenuOpen) {
+        LayersMenu(
+            layers = layers,
+            activeLayerId = activeLayerId,
+            onSetActiveLayer = { id ->
+                activeLayerId = id
+                glRenderer.setActiveLayer(id)
+            },
+            onLayerRemove = { id ->
+                if (layers.size > 1) {
+                    layers.removeIf { it.id == id }
+                    glRenderer.removeLayer(id)
+                    activeLayerId = layers.lastOrNull()?.id ?: 1
+                    glRenderer.setActiveLayer(activeLayerId)
+                }
+            },
+            onAddLayer = {
+                val newLayerId = glRenderer.addLayer()
+                layers.add(Layer(id = newLayerId, program = MyGLProgram()))
+            },
+            onClose = { isLayersMenuOpen = false },
+            glRenderer = glRenderer
+        )
     }
 }

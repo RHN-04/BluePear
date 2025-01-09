@@ -11,12 +11,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.bluepear.data.Work
 
 @Composable
 fun ProjectScreen(
-    workName: String,
+    work: Work,
     onEdit: () -> Unit,
     onExport: () -> Unit
 ) {
@@ -24,15 +26,17 @@ fun ProjectScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = workName, style = MaterialTheme.typography.titleLarge)
+        Text(text = work.title, style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
-            Text("Edit")
+        Button(onClick = onEdit, modifier = Modifier.fillMaxWidth(0.8f)) {
+            Text("Редактировать")
         }
-        Button(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
-            Text("Export")
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onExport, modifier = Modifier.fillMaxWidth(0.8f)) {
+            Text("Сохранить в PNG")
         }
     }
 }
